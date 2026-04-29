@@ -21,7 +21,8 @@ def get_m3u8(url):
         "--skip-download",
         "--no-progress",
         "--youtube-include-hls-manifest",
-        "--extract-flat",
+        "--no-check-certificate",
+        "--format", "all",
         url
     ]
 
@@ -40,32 +41,34 @@ def get_m3u8(url):
         data = json.loads(result.stdout)
         formats = data.get("formats", [])
         
-        m3u8_list = []
+        m3u8_urls = []
         
         for f in formats:
-            url_str = f.get('url', '')
+            f_url = f.get('url', '')
             protocol = f.get('protocol', '')
             
-            if 'm3u8' in protocol or '.m3u8' in url_str or 'hls' in protocol:
-                m3u8_list.append({
+            if 'm3u8' in protocol or 'hls' in protocol or 'manifest' in f_url:
+                m3u8_urls.append({
                     "format_id": f.get("format_id"),
                     "resolution": f.get("resolution"),
-                    "url": url_str,
+                    "url": f_url,
                     "protocol": protocol,
-                    "ext": f.get("ext")
+                    "ext": f.get("ext"),
+                    "vcodec": f.get("vcodec"),
+                    "acodec": f.get("acodec")
                 })
 
-        if not m3u8_list:
-            hls_url = data.get('protocol')
-            if data.get('url') and ('.m3u8' in data.get('url')):
-                m3u8_list.append({
-                    "format_id": "manifest",
-                    "url": data.get('url')
+        if not m3u8_urls:
+            hls_manifest_url = data.get('url')
+            if hls_manifest_url and 'manifest' in hls_manifest_url:
+                m3u8_urls.append({
+                    "format_id": "direct_manifest",
+                    "url": hls_manifest_url
                 })
 
         return {
             "title": data.get("title"),
-            "m3u8_urls": m3u8_list
+            "m3u8_urls": m3u8_urls
         }, 200
 
     except Exception as e:
