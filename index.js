@@ -69,12 +69,17 @@ function getM3U8(url) {
 
 // API
 app.get("/extract", async (req, res) => {
-  const video_url = req.query.url;
+  let video_url = req.query.url;
 
   if (!video_url) {
     return res.status(400).json({
       error: "URL parameter is required"
     });
+  }
+
+  // 動画ID(11桁かつURL形式でない)の場合、YouTubeのURLに変換
+  if (!video_url.includes("://") && video_url.length === 11) {
+    video_url = `https://www.youtube.com/watch?v=${video_url}`;
   }
 
   try {
