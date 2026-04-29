@@ -18,6 +18,8 @@ function getM3U8(url) {
         "--skip-download",
         "--no-playlist",
         "--no-progress",
+        "--flat-playlist", // 高速化：リスト全体を解析しない
+        "--no-check-certificates", // 高速化：SSLチェックをスキップ
         url
       ],
       { maxBuffer: 1024 * 1024 * 10 },
@@ -31,16 +33,27 @@ function getM3U8(url) {
 
         try {
           const data = JSON.parse(stdout);
-          const formats = data.formats || [];
+          const formatsRaw = data.formats || [];
 
-          // m3u8だけ抽出
-          const m3u8 = formats
-            .map(f => f.url)
-            .filter(u => u && u.includes(".m3u8"));
+          // 画質、フォーマット、itag(format_id)を含めて抽出
+          const formats = formatsRaw
+            .filter(f => f.url && f.url.includes(".m3u8"))
+            .map(f => ({
+              itag: f.format_id,
+              url: f.url,
+              ext: f.ext,
+              resolution: f.resolution || `${f.width}x${f.height}`,
+              vcodec: f.vcodec,
+              acodec: f.acodec,
+              format_note: f.format_note,
+              filesize_approx: f.filesize_approx
+            }));
 
           resolve({
-            formats: m3u8,
-            total_urls: m3u8.length
+            title: data.title,
+            thumbnail: data.thumbnail,
+            formats: formats,
+            total_urls: formats.length
           });
 
         } catch (e) {
